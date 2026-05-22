@@ -1,504 +1,220 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Калькулятор рассрочки на автомобиль</title>
-<style>
-  * { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f4f6fa;
-  color: #1a2233;
-}
-.topbar {
-  background: #1a2233;
-  color: #fff;
-  padding: 16px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.topbar h1 { font-size: 20px; margin: 0; }
-.admin-btn {
-  background: #2b3a55;
-  color: #fff;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-.admin-btn:hover { background: #3b4f73; }
-
-.container {
-  max-width: 1000px;
-  margin: 24px auto;
-  padding: 0 16px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-@media (max-width: 760px) {
-  .container { grid-template-columns: 1fr; }
-}
-.card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.05);
-}
-.field { margin-bottom: 16px; }
-.field label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 6px;
-  font-size: 14px;
-}
-.field input[type="number"] {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #d4dae5;
-  border-radius: 8px;
-  font-size: 16px;
-}
-.field input[type="number"]:focus {
-  outline: none;
-  border-color: #3b6fe0;
-}
-.hint { font-size: 12px; color: #6b7689; margin-top: 4px; }
-.error { font-size: 12px; color: #d23b3b; margin-top: 4px; min-height: 14px; }
-
-.readonly-box {
-  background: #f4f6fa;
-  border: 1px solid #e0e5ee;
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-weight: 600;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.readonly-box small { color: #6b7689; font-weight: 400; font-size: 12px; }
-
-.checkbox {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 14px;
-}
-.checkbox input { margin-top: 3px; }
-
-.summary {
-  border-top: 1px solid #e0e5ee;
-  padding-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 14px;
-}
-.summary div { display: flex; justify-content: space-between; }
-.summary strong { color: #1a2233; }
-
-.results h2 { margin: 0 0 16px; font-size: 18px; }
-.terms { display: flex; flex-direction: column; gap: 10px; }
-.term {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  background: #f4f6fa;
-  border-radius: 10px;
-  border-left: 4px solid #3b6fe0;
-}
-.term .months { font-weight: 600; color: #1a2233; }
-.term .amount { font-size: 18px; font-weight: 700; color: #3b6fe0; }
-.term.disabled { opacity: .5; }
-.term.disabled .amount { color: #6b7689; }
-
-/* Admin */
-.admin-panel {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.5);
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 40px 16px;
-  overflow-y: auto;
-  z-index: 100;
-}
-.admin-panel.hidden { display: none; }
-.admin-inner {
-  background: #fff;
-  border-radius: 12px;
-  max-width: 640px;
-  width: 100%;
-  padding: 24px;
-}
-.admin-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.admin-head h2 { margin: 0; font-size: 20px; }
-.admin-section {
-  border-top: 1px solid #e0e5ee;
-  padding: 16px 0;
-}
-.admin-section h3 { margin: 0 0 10px; font-size: 14px; color: #6b7689; text-transform: uppercase; letter-spacing: .5px; }
-.admin-section input[type="number"] {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid #d4dae5;
-  border-radius: 6px;
-  font-size: 14px;
-}
-.row { display: flex; gap: 12px; }
-.row label { flex: 1; font-size: 13px; font-weight: 500; }
-.row label input { margin-top: 4px; }
-
-.range-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr auto;
-  gap: 8px;
-  margin-bottom: 8px;
-  align-items: end;
-}
-.range-row label { font-size: 12px; font-weight: 500; }
-.range-row input { width: 100%; padding: 6px 8px; border: 1px solid #d4dae5; border-radius: 6px; font-size: 13px; }
-.range-row .del {
-  background: #fdecec;
-  color: #d23b3b;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 10px;
-  cursor: pointer;
-  height: 30px;
-}
-
-.admin-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 16px;
-}
-.primary {
-  background: #3b6fe0;
-  color: #fff;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-}
-.primary:hover { background: #2d5cc4; }
-.ghost {
-  background: transparent;
-  color: #3b6fe0;
-  border: 1px solid #3b6fe0;
-  padding: 10px 18px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-}
-.ghost:hover { background: #eef3fd; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Распознавание дорожных знаков</title>
+    <!-- Подключаем TensorFlow.js и библиотеку для распознавания объектов (например, COCO-SSD для демо) -->
+    <!-- Для реальных знаков РФ лучше обучить свою модель в Teachable Machine и подключить её -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 3/4;
+            background: #000;
+        }
+        video, canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #interface {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            z-index: 10;
+        }
+        button {
+            background: #ff3b30;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        #status {
+            margin-top: 15px;
+            font-size: 16px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 15px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+    </style>
 </head>
 <body>
-  <header class="topbar">
-    <h1>Калькулятор рассрочки</h1>
-    <button id="adminToggle" class="admin-btn" type="button">⚙ Админ</button>
-  </header>
 
-  <main class="container">
-    <section class="calc card">
-      <div class="field">
-        <label for="carPrice">Стоимость автомобиля, ₽</label>
-        <input type="number" id="carPrice" step="1000" />
-        <div class="hint" id="carPriceHint"></div>
-        <div class="error" id="carPriceError"></div>
-      </div>
-
-      <div class="field">
-        <label for="downPayment">Первоначальный взнос, ₽</label>
-        <input type="number" id="downPayment" step="1000" />
-        <div class="hint" id="downHint"></div>
-        <div class="error" id="downError"></div>
-      </div>
-
-      <div class="field">
-        <label>Сопутствующие расходы</label>
-        <div class="readonly-box">
-          <span id="expensesView">30 000 ₽</span>
-          <small>ОСАГО на 1 год, установка ГЛОНАСС, техосмотр, госпошлина ГИБДД</small>
-        </div>
-      </div>
-
-      <div class="field checkbox-field">
-        <label class="checkbox">
-          <input type="checkbox" id="payseparate" />
-          <span>Оплатить отдельно при оформлении (не включать в сумму рассрочки)</span>
-        </label>
-        <div class="hint">Сумма: <span id="extraFeeView">20 000 ₽</span></div>
-      </div>
-
-      <div class="summary">
-        <div><span>Тело рассрочки:</span><strong id="bodySum">—</strong></div>
-        <div><span>Фиксированные проценты:</span><strong id="interestView">17 500 ₽ / мес</strong></div>
-      </div>
-    </section>
-
-    <section class="results card">
-      <h2>Ежемесячный платёж</h2>
-      <div class="terms" id="terms"></div>
-    </section>
-  </main>
-
-  <!-- Admin Panel -->
-  <div id="adminPanel" class="admin-panel hidden">
-    <div class="admin-inner">
-      <div class="admin-head">
-        <h2>Панель администратора</h2>
-        <button id="adminClose" class="admin-btn" type="button">✕</button>
-      </div>
-
-      <div class="admin-section">
-        <h3>Стоимость автомобиля</h3>
-        <div class="row">
-          <label>Минимум, ₽<input type="number" id="adm_minPrice" /></label>
-          <label>Максимум, ₽<input type="number" id="adm_maxPrice" /></label>
-        </div>
-      </div>
-
-      <div class="admin-section">
-        <h3>Диапазоны первоначального взноса (%)</h3>
-        <div id="ranges"></div>
-        <button id="addRange" class="ghost" type="button">+ Добавить диапазон</button>
-      </div>
-
-      <div class="admin-section">
-        <h3>Сопутствующие расходы (фикс., ₽)</h3>
-        <input type="number" id="adm_expenses" />
-      </div>
-
-      <div class="admin-section">
-        <h3>Услуга автоподбора (чекбокс), ₽</h3>
-        <input type="number" id="adm_extraFee" />
-      </div>
-
-      <div class="admin-section">
-        <h3>Фиксированные проценты, ₽/мес</h3>
-        <input type="number" id="adm_interest" />
-      </div>
-
-      <div class="admin-actions">
-        <button id="adminSave" class="primary" type="button">Сохранить</button>
-        <button id="adminReset" class="ghost" type="button">Сбросить по умолчанию</button>
-      </div>
+    <div id="container">
+        <!-- Поток с камеры -->
+        <video id="webcam" autoplay playsinline muted></video>
+        <!-- Отрисовка рамок поверх видео -->
+        <canvas id="overlay"></canvas>
     </div>
-  </div>
 
-  <script>
-    // ===== Defaults =====
-const DEFAULT_SETTINGS = {
-  minPrice: 450000,
-  maxPrice: 1500000,
-  ranges: [
-    { from: 450000,  to: 899000,  percent: 10 },
-    { from: 900000,  to: 1199000, percent: 20 },
-    { from: 1200000, to: 1500000, percent: 30 },
-  ],
-  expenses: 30000,
-  extraFee: 20000,
-  interest: 17500,
-  terms: [18, 24, 36, 48, 60],
+    <div id="interface">
+        <button id="start-btn">Включить радар знаков</button>
+        <br>
+        <div id="status">Ожидание запуска...</div>
+    </div>
+
+<script>
+const video = document.getElementById('webcam');
+const canvas = document.getElementById('overlay');
+const ctx = canvas.getContext('2d');
+const startBtn = document.getElementById('start-btn');
+const statusDiv = document.getElementById('status');
+
+let model = null;
+let isPredicting = false;
+let lastSpokenSign = '';
+let lastSpokenTime = 0;
+
+// Словарь перевода (для демонстрационной модели COCO-SSD, распознающей базовые объекты вроде stop sign)
+const signVocabulary = {
+    'stop sign': 'Знак Стоп. Движение без остановки запрещено.',
+    'traffic light': 'Светофор',
+    // Если вы загрузите свою модель знаков (пешеходный, главная дорога и т.д.), словарь расширяется здесь:
+    'main_road': 'Главная дорога',
+    'pedestrian_crossing': 'Пешеходный переход'
 };
 
-const STORAGE_KEY = "car_calc_settings_v1";
-
-function loadSettings() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return structuredClone(DEFAULT_SETTINGS);
-    return { ...structuredClone(DEFAULT_SETTINGS), ...JSON.parse(raw) };
-  } catch {
-    return structuredClone(DEFAULT_SETTINGS);
-  }
-}
-function saveSettings(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
-
-let settings = loadSettings();
-
-// ===== Helpers =====
-const fmt = (n) => {
-  if (!isFinite(n)) return "—";
-  return Math.round(n).toLocaleString("ru-RU") + " ₽";
-};
-
-function findRange(price) {
-  return settings.ranges.find(r => price >= r.from && price <= r.to) || null;
-}
-
-function getMinDown(price) {
-  const r = findRange(price);
-  if (!r) return null;
-  return Math.ceil(price * r.percent / 100);
-}
-
-// ===== DOM =====
-const $ = (id) => document.getElementById(id);
-const carPriceEl = $("carPrice");
-const downEl = $("downPayment");
-const payseparateEl = $("payseparate");
-const carPriceHint = $("carPriceHint");
-const carPriceError = $("carPriceError");
-const downHint = $("downHint");
-const downError = $("downError");
-const expensesView = $("expensesView");
-const extraFeeView = $("extraFeeView");
-const bodySumEl = $("bodySum");
-const interestView = $("interestView");
-const termsEl = $("terms");
-
-function applySettingsToUI() {
-  carPriceEl.min = settings.minPrice;
-  carPriceEl.max = settings.maxPrice;
-  if (!carPriceEl.value || +carPriceEl.value < settings.minPrice) {
-    carPriceEl.value = settings.minPrice;
-  }
-  carPriceHint.textContent = `От ${fmt(settings.minPrice)} до ${fmt(settings.maxPrice)}`;
-  expensesView.textContent = fmt(settings.expenses);
-  extraFeeView.textContent = fmt(settings.extraFee);
-  interestView.textContent = fmt(settings.interest) + " / мес";
-}
-
-function recalc() {
-  let price = parseFloat(carPriceEl.value) || 0;
-  let priceErr = "";
-  if (price < settings.minPrice) priceErr = `Минимум ${fmt(settings.minPrice)}`;
-  else if (price > settings.maxPrice) priceErr = `Максимум ${fmt(settings.maxPrice)}`;
-  carPriceError.textContent = priceErr;
-
-  const minDown = getMinDown(price);
-  if (minDown == null) {
-    downHint.textContent = "Стоимость вне допустимых диапазонов";
-    downEl.min = 0;
-  } else {
-    const r = findRange(price);
-    downHint.textContent = `Минимальный взнос: ${fmt(minDown)} (${r.percent}%)`;
-    downEl.min = minDown;
-    if (!downEl.value || +downEl.value < minDown) {
-      downEl.value = minDown;
+// 1. Инициализация и загрузка ИИ-модели
+async function initApp() {
+    statusDiv.innerText = 'Загрузка ИИ-модели...';
+    try {
+        // Загружаем предобученную модель распознавания объектов
+        model = await cocoSsd.load();
+        statusDiv.innerText = 'Модель загружена. Нажмите кнопку для старта.';
+        startBtn.disabled = false;
+    } catch (error) {
+        statusDiv.innerText = 'Ошибка загрузки модели: ' + error.message;
     }
-  }
-
-  let down = parseFloat(downEl.value) || 0;
-  let downErr = "";
-  if (minDown != null && down < minDown) downErr = `Меньше минимально допустимого (${fmt(minDown)})`;
-  if (down > price) downErr = "Взнос не может превышать стоимость авто";
-  downError.textContent = downErr;
-
-  // Body
-  const includeFee = !payseparateEl.checked; // checkbox ON => pay separately, NOT included
-  const body = price + (includeFee ? settings.extraFee : 0) - down;
-  bodySumEl.textContent = fmt(body);
-
-  // Terms
-  termsEl.innerHTML = "";
-  const valid = !priceErr && !downErr && body > 0;
-  settings.terms.forEach(m => {
-    const monthly = valid ? (body / m + settings.interest) : NaN;
-    const el = document.createElement("div");
-    el.className = "term" + (valid ? "" : " disabled");
-    el.innerHTML = `<span class="months">${m} мес</span><span class="amount">${valid ? fmt(monthly) : "—"}</span>`;
-    termsEl.appendChild(el);
-  });
 }
 
-[carPriceEl, downEl].forEach(el => el.addEventListener("input", recalc));
-payseparateEl.addEventListener("change", recalc);
+// 2. Запуск основной (задней) камеры смартфона
+async function startCamera() {
+    statusDiv.innerText = 'Запуск камеры...';
+    const constraints = {
+        video: {
+            // Режим 'environment' принудительно активирует заднюю камеру телефона
+            facingMode: 'environment', 
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+        },
+        audio: false
+    };
 
-// ===== Admin =====
-const adminPanel = $("adminPanel");
-$("adminToggle").addEventListener("click", () => {
-  fillAdmin();
-  adminPanel.classList.remove("hidden");
-});
-$("adminClose").addEventListener("click", () => adminPanel.classList.add("hidden"));
-adminPanel.addEventListener("click", (e) => { if (e.target === adminPanel) adminPanel.classList.add("hidden"); });
-
-function fillAdmin() {
-  $("adm_minPrice").value = settings.minPrice;
-  $("adm_maxPrice").value = settings.maxPrice;
-  $("adm_expenses").value = settings.expenses;
-  $("adm_extraFee").value = settings.extraFee;
-  $("adm_interest").value = settings.interest;
-  renderRanges();
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+        
+        // Корректируем размер холста под видео, когда оно загрузится
+        video.onloadedmetadata = () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            isPredicting = true;
+            statusDiv.innerText = 'Сканирование дороги...';
+            startBtn.style.display = 'none'; // Скрываем кнопку после старта
+            detectFrame();
+        };
+    } catch (err) {
+        statusDiv.innerText = 'Доступ к камере отклонен или недоступен (нужен HTTPS).';
+        console.error(err);
+    }
 }
 
-function renderRanges() {
-  const wrap = $("ranges");
-  wrap.innerHTML = "";
-  settings.ranges.forEach((r, i) => {
-    const row = document.createElement("div");
-    row.className = "range-row";
-    row.innerHTML = `
-      <label>От, ₽<input type="number" data-i="${i}" data-k="from" value="${r.from}"></label>
-      <label>До, ₽<input type="number" data-i="${i}" data-k="to" value="${r.to}"></label>
-      <label>%<input type="number" data-i="${i}" data-k="percent" value="${r.percent}"></label>
-      <button class="del" data-del="${i}" type="button">✕</button>
-    `;
-    wrap.appendChild(row);
-  });
-  wrap.querySelectorAll("input").forEach(inp => {
-    inp.addEventListener("input", () => {
-      const i = +inp.dataset.i, k = inp.dataset.k;
-      settings.ranges[i][k] = parseFloat(inp.value) || 0;
+// 3. Цикл обработки кадров и распознавания
+async function detectFrame() {
+    if (!isPredicting) return;
+
+    // Получаем предсказания нейросети для текущего кадра видео
+    const predictions = await model.detect(video);
+    
+    // Очищаем холст перед новой отрисовкой
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    predictions.forEach(prediction => {
+        // Проверяем, есть ли распознанный объект в нашем словаре знаков и уверенность ИИ > 65%
+        if (signVocabulary[prediction.class] && prediction.score > 0.65) {
+            const [x, y, width, height] = prediction.bbox;
+            
+            // Рисуем рамку вокруг знака
+            ctx.strokeStyle = '#00FF00';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(x, y, width, height);
+            
+            // Текст над рамкой
+            ctx.fillStyle = '#00FF00';
+            ctx.font = '18px Arial';
+            ctx.fillText(signVocabulary[prediction.class], x, y > 20 ? y - 10 : 20);
+            
+            // Озвучиваем знак
+            speakSign(prediction.class);
+        }
     });
-  });
-  wrap.querySelectorAll("[data-del]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      settings.ranges.splice(+btn.dataset.del, 1);
-      renderRanges();
-    });
-  });
+
+    // Рекурсивно вызываем следующий кадр (обычно 20-30 FPS в зависимости от процессора телефона)
+    requestAnimationFrame(detectFrame);
 }
 
-$("addRange").addEventListener("click", () => {
-  settings.ranges.push({ from: 0, to: 0, percent: 10 });
-  renderRanges();
+// 4. Синтез речи (Web Speech API)
+function speakSign(signClass) {
+    const now = Date.now();
+    const ruText = signVocabulary[signClass];
+    
+    // Защита от "зацикливания" — не повторять тот же знак чаще, чем раз в 4 секунды
+    if (signClass === lastSpokenSign && (now - lastSpokenTime) < 4000) {
+        return; 
+    }
+
+    if ('speechSynthesis' in window) {
+        // Останавливаем прошлую речь, если она не успела договорить
+        window.speechSynthesis.cancel(); 
+        
+        const utterance = new SpeechSynthesisUtterance(ruText);
+        utterance.lang = 'ru-RU';
+        utterance.rate = 1.0; // Скорость речи
+        
+        window.speechSynthesis.speak(utterance);
+        
+        lastSpokenSign = signClass;
+        lastSpokenTime = now;
+    }
+}
+
+// Привязка к кнопке (браузеры блокируют звук и камеру без прямого клика пользователя)
+startBtn.addEventListener('click', () => {
+    if (model) {
+        startCamera();
+    }
 });
 
-$("adminSave").addEventListener("click", () => {
-  settings.minPrice = +$("adm_minPrice").value || 0;
-  settings.maxPrice = +$("adm_maxPrice").value || 0;
-  settings.expenses = +$("adm_expenses").value || 0;
-  settings.extraFee = +$("adm_extraFee").value || 0;
-  settings.interest = +$("adm_interest").value || 0;
-  settings.ranges.sort((a, b) => a.from - b.from);
-  saveSettings(settings);
-  applySettingsToUI();
-  recalc();
-  adminPanel.classList.add("hidden");
-});
-
-$("adminReset").addEventListener("click", () => {
-  if (!confirm("Сбросить настройки по умолчанию?")) return;
-  settings = structuredClone(DEFAULT_SETTINGS);
-  saveSettings(settings);
-  fillAdmin();
-  applySettingsToUI();
-  recalc();
-});
-
-// ===== Init =====
-applySettingsToUI();
-downEl.value = getMinDown(+carPriceEl.value) || 0;
-recalc();
-  </script>
+// Запуск приложения
+initApp();
+</script>
 </body>
 </html>
