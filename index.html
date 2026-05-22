@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Распознавание дорожных знаков</title>
-    <!-- Подключаем TensorFlow.js и библиотеку для распознавания объектов (например, COCO-SSD для демо) -->
-    <!-- Для реальных знаков РФ лучше обучить свою модель в Teachable Machine и подключить её -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <title>Радар Дорожных Знаков</title>
+    
+    <!-- Подключаем TensorFlow.js и библиотеку Teachable Machine -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     
     <style>
         body {
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
-            background: #111;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #0a0a0c;
             color: #fff;
             display: flex;
             flex-direction: column;
@@ -25,103 +25,150 @@
         }
         #container {
             position: relative;
-            width: 100%;
-            max-width: 500px;
+            width: 90%;
+            max-width: 440px;
             aspect-ratio: 3/4;
             background: #000;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+            border: 2px solid #222;
         }
-        video, canvas {
+        video {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transform: scaleX(1); /* Для задней камеры отражение не нужно */
         }
         #interface {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            right: 0;
+            margin-top: 25px;
             text-align: center;
             z-index: 10;
+            width: 90%;
+            max-width: 440px;
         }
         button {
-            background: #ff3b30;
+            background: linear-gradient(135deg, #007aff, #0056b3);
             color: white;
             border: none;
-            padding: 15px 30px;
+            padding: 16px 36px;
             font-size: 18px;
-            border-radius: 30px;
+            font-weight: 600;
+            border-radius: 50px;
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 15px rgba(0,122,255,0.4);
+            transition: transform 0.2s, background 0.2s;
+            width: 100%;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        button:disabled {
+            background: #333;
+            color: #777;
+            box-shadow: none;
+            cursor: not-allowed;
         }
         #status {
             margin-top: 15px;
-            font-size: 16px;
-            background: rgba(0,0,0,0.7);
-            padding: 8px 15px;
-            border-radius: 10px;
+            font-size: 15px;
+            color: #aaa;
+            background: rgba(255,255,255,0.05);
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
             display: inline-block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #result-badge {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 122, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            display: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.2);
+            white-space: nowrap;
         }
     </style>
 </head>
 <body>
 
     <div id="container">
-        <!-- Поток с камеры -->
+        <!-- Сюда транслируется поток с камеры -->
         <video id="webcam" autoplay playsinline muted></video>
-        <!-- Отрисовка рамок поверх видео -->
-        <canvas id="overlay"></canvas>
+        <!-- Плашка с названием распознанного знака поверх видео -->
+        <div id="result-badge">Знак...</div>
     </div>
 
     <div id="interface">
-        <button id="start-btn">Включить радар знаков</button>
-        <br>
-        <div id="status">Ожидание запуска...</div>
+        <button id="start-btn" disabled>Загрузка ИИ...</button>
+        <div id="status">Пожалуйста, подождите...</div>
     </div>
 
 <script>
+// Вставляем твою ссылку на обученную модель (слеш на конце обязателен)
+const MODEL_URL = "https://teachablemachine.withgoogle.com/models/TNJLHZfJv/";
+
 const video = document.getElementById('webcam');
-const canvas = document.getElementById('overlay');
-const ctx = canvas.getContext('2d');
 const startBtn = document.getElementById('start-btn');
 const statusDiv = document.getElementById('status');
+const resultBadge = document.getElementById('result-badge');
 
 let model = null;
 let isPredicting = false;
 let lastSpokenSign = '';
 let lastSpokenTime = 0;
 
-// Словарь перевода (для демонстрационной модели COCO-SSD, распознающей базовые объекты вроде stop sign)
-const signVocabulary = {
-    'stop sign': 'Знак Стоп. Движение без остановки запрещено.',
-    'traffic light': 'Светофор',
-    // Если вы загрузите свою модель знаков (пешеходный, главная дорога и т.д.), словарь расширяется здесь:
-    'main_road': 'Главная дорога',
-    'pedestrian_crossing': 'Пешеходный переход'
+// Порог уверенности модели (0.85 = 85%). Снижай до 0.70, если модель "стесняется" в машине
+const CONFIDENCE_THRESHOLD = 0.85; 
+
+// Словарь "Красивых названий" для озвучки.
+// Слева пиши НАЗВАНИЕ КЛАССА точь-в-точь как ты назвал его в Teachable Machine (например, "Class 1" или "Stop").
+// Справа — то, что приложение выведет на экран и скажет вслух.
+const signSpeechVocabulary = {
+    'Class 1': 'Ограничение скорости шестьдесят километров в час',
+    'Class 2': 'Пешеходный переход',
+    'Class 3': 'Уступите дорогу',
+    'Stop': 'Знак стоп. Движение без остановки запрещено'
+    // Добавь сюда остальные свои классы по аналогии
 };
 
-// 1. Инициализация и загрузка ИИ-модели
+// 1. Инициализация и загрузка весов с серверов Google Teachable Machine
 async function initApp() {
-    statusDiv.innerText = 'Загрузка ИИ-модели...';
     try {
-        // Загружаем предобученную модель распознавания объектов
-        model = await cocoSsd.load();
-        statusDiv.innerText = 'Модель загружена. Нажмите кнопку для старта.';
+        const modelURL = MODEL_URL + "model.json";
+        const metadataURL = MODEL_URL + "metadata.json";
+
+        statusDiv.innerText = 'Скачивание ИИ-модели из облака...';
+        model = await tmImage.load(modelURL, metadataURL);
+        
+        statusDiv.innerText = 'ИИ готов к работе.';
+        startBtn.innerText = 'Включить сканер знаков';
         startBtn.disabled = false;
     } catch (error) {
-        statusDiv.innerText = 'Ошибка загрузки модели: ' + error.message;
+        statusDiv.innerText = 'Ошибка загрузки модели. Проверь ссылку.';
+        console.error(error);
     }
 }
 
-// 2. Запуск основной (задней) камеры смартфона
+// 2. Доступ к задней камере устройства
 async function startCamera() {
-    statusDiv.innerText = 'Запуск камеры...';
+    statusDiv.innerText = 'Запрос доступа к камере...';
+    
     const constraints = {
         video: {
-            // Режим 'environment' принудительно активирует заднюю камеру телефона
-            facingMode: 'environment', 
+            facingMode: 'environment', // Принудительно берем основную/заднюю камеру
             width: { ideal: 640 },
             height: { ideal: 480 }
         },
@@ -132,88 +179,94 @@ async function startCamera() {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
         
-        // Корректируем размер холста под видео, когда оно загрузится
         video.onloadedmetadata = () => {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
             isPredicting = true;
-            statusDiv.innerText = 'Сканирование дороги...';
-            startBtn.style.display = 'none'; // Скрываем кнопку после старта
-            detectFrame();
+            statusDiv.style.display = 'none'; // Скрываем статусную строку
+            startBtn.style.display = 'none';  // Скрываем кнопку управления
+            resultBadge.style.display = 'block'; // Показываем плашку уведомлений
+            
+            // Запускаем бесконечный цикл анализа кадров
+            loop();
         };
     } catch (err) {
-        statusDiv.innerText = 'Доступ к камере отклонен или недоступен (нужен HTTPS).';
+        statusDiv.innerText = 'Ошибка: Доступ к камере заблокирован. Нужен HTTPS протокол.';
         console.error(err);
     }
 }
 
-// 3. Цикл обработки кадров и распознавания
-async function detectFrame() {
+// 3. Бесконечный цикл захвата кадров из видеопотока
+async function loop() {
     if (!isPredicting) return;
-
-    // Получаем предсказания нейросети для текущего кадра видео
-    const predictions = await model.detect(video);
     
-    // Очищаем холст перед новой отрисовкой
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    predictions.forEach(prediction => {
-        // Проверяем, есть ли распознанный объект в нашем словаре знаков и уверенность ИИ > 65%
-        if (signVocabulary[prediction.class] && prediction.score > 0.65) {
-            const [x, y, width, height] = prediction.bbox;
-            
-            // Рисуем рамку вокруг знака
-            ctx.strokeStyle = '#00FF00';
-            ctx.lineWidth = 4;
-            ctx.strokeRect(x, y, width, height);
-            
-            // Текст над рамкой
-            ctx.fillStyle = '#00FF00';
-            ctx.font = '18px Arial';
-            ctx.fillText(signVocabulary[prediction.class], x, y > 20 ? y - 10 : 20);
-            
-            // Озвучиваем знак
-            speakSign(prediction.class);
-        }
-    });
-
-    // Рекурсивно вызываем следующий кадр (обычно 20-30 FPS в зависимости от процессора телефона)
-    requestAnimationFrame(detectFrame);
+    await predictFrame();
+    // Используем requestAnimationFrame для синхронизации с частотой обновления экрана (до 30-60 FPS)
+    window.requestAnimationFrame(loop);
 }
 
-// 4. Синтез речи (Web Speech API)
-function speakSign(signClass) {
-    const now = Date.now();
-    const ruText = signVocabulary[signClass];
+// 4. Оценка кадра нейросетью
+async function predictFrame() {
+    // Получаем массив вероятностей для всех классов сразу
+    const prediction = await model.predict(video);
     
-    // Защита от "зацикливания" — не повторять тот же знак чаще, чем раз в 4 секунды
-    if (signClass === lastSpokenSign && (now - lastSpokenTime) < 4000) {
+    // Находим класс с максимальной вероятностью на текущем кадре
+    let maxPrediction = prediction[0];
+    for (let i = 1; i < prediction.length; i++) {
+        if (prediction[i].probability > maxPrediction.probability) {
+            maxPrediction = prediction[i];
+        }
+    }
+
+    // Если уверенность сети выше нашего порога
+    if (maxPrediction.probability > CONFIDENCE_THRESHOLD) {
+        const className = maxPrediction.className;
+        
+        // Получаем понятный текст из нашего словаря. Если класса нет в словаре, берем имя из Teachable Machine
+        const humanReadableText = signSpeechVocabulary[className] || className;
+        
+        // Обновляем текст на экране
+        resultBadge.innerText = humanReadableText;
+        resultBadge.style.background = 'rgba(0, 190, 110, 0.9)'; // Зеленая вспышка при успехе
+        
+        // Отправляем текст в модуль озвучки
+        speak(className, humanReadableText);
+    } else {
+        // Если ИИ сомневается или видит "пустую дорогу" (фон)
+        resultBadge.style.background = 'rgba(0, 122, 255, 0.8)';
+        // Если в модели есть класс фона (например, "Background"), можно написать "Дорога пуста"
+    }
+}
+
+// 5. Озвучивание текста (Web Speech API)
+function speak(className, textToSpeak) {
+    const now = Date.now();
+    
+    // Защита от спама: если знак тот же, не повторяем его в течение 5 секунд (5000 мс)
+    if (className === lastSpokenSign && (now - lastSpokenTime) < 5000) {
         return; 
     }
 
     if ('speechSynthesis' in window) {
-        // Останавливаем прошлую речь, если она не успела договорить
+        // Прерываем текущую фразу, если камера мгновенно нашла новый важный знак
         window.speechSynthesis.cancel(); 
         
-        const utterance = new SpeechSynthesisUtterance(ruText);
-        utterance.lang = 'ru-RU';
-        utterance.rate = 1.0; // Скорость речи
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = 'ru-RU'; // Принудительный русский пакет синтезатора
+        utterance.rate = 1.1;     // Чуть ускоряем темп речи для дорожных условий
         
         window.speechSynthesis.speak(utterance);
         
-        lastSpokenSign = signClass;
+        // Запоминаем, что мы только что озвучили этот знак
+        lastSpokenSign = className;
         lastSpokenTime = now;
     }
 }
 
-// Привязка к кнопке (браузеры блокируют звук и камеру без прямого клика пользователя)
+// Обработчик кнопки старта
 startBtn.addEventListener('click', () => {
-    if (model) {
-        startCamera();
-    }
+    if (model) startCamera();
 });
 
-// Запуск приложения
+// Запуск процесса инициализации при открытии страницы
 initApp();
 </script>
 </body>
