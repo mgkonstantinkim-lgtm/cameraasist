@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Калькулятор рассрочки на автомобиль</title>
+<style>
+  * { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f4f6fa;
+  color: #1a2233;
+}
+.topbar {
+  background: #1a2233;
+  color: #fff;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.topbar h1 { font-size: 20px; margin: 0; }
+.admin-btn {
+  background: #2b3a55;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.admin-btn:hover { background: #3b4f73; }
+
+.container {
+  max-width: 1000px;
+  margin: 24px auto;
+  padding: 0 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+@media (max-width: 760px) {
+  .container { grid-template-columns: 1fr; }
+}
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+}
+.field { margin-bottom: 16px; }
+.field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+.field input[type="number"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d4dae5;
+  border-radius: 8px;
+  font-size: 16px;
+}
+.field input[type="number"]:focus {
+  outline: none;
+  border-color: #3b6fe0;
+}
+.hint { font-size: 12px; color: #6b7689; margin-top: 4px; }
+.error { font-size: 12px; color: #d23b3b; margin-top: 4px; min-height: 14px; }
+
+.readonly-box {
+  background: #f4f6fa;
+  border: 1px solid #e0e5ee;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.readonly-box small { color: #6b7689; font-weight: 400; font-size: 12px; }
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+}
+.checkbox input { margin-top: 3px; }
+
+.summary {
+  border-top: 1px solid #e0e5ee;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+.summary div { display: flex; justify-content: space-between; }
+.summary strong { color: #1a2233; }
+
+.results h2 { margin: 0 0 16px; font-size: 18px; }
+.terms { display: flex; flex-direction: column; gap: 10px; }
+.term {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: #f4f6fa;
+  border-radius: 10px;
+  border-left: 4px solid #3b6fe0;
+}
+.term .months { font-weight: 600; color: #1a2233; }
+.term .amount { font-size: 18px; font-weight: 700; color: #3b6fe0; }
+.term.disabled { opacity: .5; }
+.term.disabled .amount { color: #6b7689; }
+
+/* Admin */
+.admin-panel {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 16px;
+  overflow-y: auto;
+  z-index: 100;
+}
+.admin-panel.hidden { display: none; }
+.admin-inner {
+  background: #fff;
+  border-radius: 12px;
+  max-width: 640px;
+  width: 100%;
+  padding: 24px;
+}
+.admin-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.admin-head h2 { margin: 0; font-size: 20px; }
+.admin-section {
+  border-top: 1px solid #e0e5ee;
+  padding: 16px 0;
+}
+.admin-section h3 { margin: 0 0 10px; font-size: 14px; color: #6b7689; text-transform: uppercase; letter-spacing: .5px; }
+.admin-section input[type="number"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d4dae5;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.row { display: flex; gap: 12px; }
+.row label { flex: 1; font-size: 13px; font-weight: 500; }
+.row label input { margin-top: 4px; }
+
+.range-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: end;
+}
+.range-row label { font-size: 12px; font-weight: 500; }
+.range-row input { width: 100%; padding: 6px 8px; border: 1px solid #d4dae5; border-radius: 6px; font-size: 13px; }
+.range-row .del {
+  background: #fdecec;
+  color: #d23b3b;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  height: 30px;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+.primary {
+  background: #3b6fe0;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.primary:hover { background: #2d5cc4; }
+.ghost {
+  background: transparent;
+  color: #3b6fe0;
+  border: 1px solid #3b6fe0;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.ghost:hover { background: #eef3fd; }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <h1>Калькулятор рассрочки</h1>
+    <button id="adminToggle" class="admin-btn" type="button">⚙ Админ</button>
+  </header>
+
+  <main class="container">
+    <section class="calc card">
+      <div class="field">
+        <label for="carPrice">Стоимость автомобиля, ₽</label>
+        <input type="number" id="carPrice" step="1000" />
+        <div class="hint" id="carPriceHint"></div>
+        <div class="error" id="carPriceError"></div>
+      </div>
+
+      <div class="field">
+        <label for="downPayment">Первоначальный взнос, ₽</label>
+        <input type="number" id="downPayment" step="1000" />
+        <div class="hint" id="downHint"></div>
+        <div class="error" id="downError"></div>
+      </div>
+
+      <div class="field">
+        <label>Сопутствующие расходы</label>
+        <div class="readonly-box">
+          <span id="expensesView">30 000 ₽</span>
+          <small>ОСАГО на 1 год, установка ГЛОНАСС, техосмотр, госпошлина ГИБДД</small>
+        </div>
+      </div>
+
+      <div class="field checkbox-field">
+        <label class="checkbox">
+          <input type="checkbox" id="payseparate" />
+          <span>Оплатить отдельно при оформлении (не включать в сумму рассрочки)</span>
+        </label>
+        <div class="hint">Сумма: <span id="extraFeeView">20 000 ₽</span></div>
+      </div>
+
+      <div class="summary">
+        <div><span>Тело рассрочки:</span><strong id="bodySum">—</strong></div>
+        <div><span>Фиксированные проценты:</span><strong id="interestView">17 500 ₽ / мес</strong></div>
+      </div>
+    </section>
+
+    <section class="results card">
+      <h2>Ежемесячный платёж</h2>
+      <div class="terms" id="terms"></div>
+    </section>
+  </main>
+
+  <!-- Admin Panel -->
+  <div id="adminPanel" class="admin-panel hidden">
+    <div class="admin-inner">
+      <div class="admin-head">
+        <h2>Панель администратора</h2>
+        <button id="adminClose" class="admin-btn" type="button">✕</button>
+      </div>
+
+      <div class="admin-section">
+        <h3>Стоимость автомобиля</h3>
+        <div class="row">
+          <label>Минимум, ₽<input type="number" id="adm_minPrice" /></label>
+          <label>Максимум, ₽<input type="number" id="adm_maxPrice" /></label>
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <h3>Диапазоны первоначального взноса (%)</h3>
+        <div id="ranges"></div>
+        <button id="addRange" class="ghost" type="button">+ Добавить диапазон</button>
+      </div>
+
+      <div class="admin-section">
+        <h3>Сопутствующие расходы (фикс., ₽)</h3>
+        <input type="number" id="adm_expenses" />
+      </div>
+
+      <div class="admin-section">
+        <h3>Услуга автоподбора (чекбокс), ₽</h3>
+        <input type="number" id="adm_extraFee" />
+      </div>
+
+      <div class="admin-section">
+        <h3>Фиксированные проценты, ₽/мес</h3>
+        <input type="number" id="adm_interest" />
+      </div>
+
+      <div class="admin-actions">
+        <button id="adminSave" class="primary" type="button">Сохранить</button>
+        <button id="adminReset" class="ghost" type="button">Сбросить по умолчанию</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Defaults =====
+const DEFAULT_SETTINGS = {
+  minPrice: 450000,
+  maxPrice: 1500000,
+  ranges: [
+    { from: 450000,  to: 899000,  percent: 10 },
+    { from: 900000,  to: 1199000, percent: 20 },
+    { from: 1200000, to: 1500000, percent: 30 },
+  ],
+  expenses: 30000,
+  extraFee: 20000,
+  interest: 17500,
+  terms: [18, 24, 36, 48, 60],
+};
+
+const STORAGE_KEY = "car_calc_settings_v1";
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return structuredClone(DEFAULT_SETTINGS);
+    return { ...structuredClone(DEFAULT_SETTINGS), ...JSON.parse(raw) };
+  } catch {
+    return structuredClone(DEFAULT_SETTINGS);
+  }
+}
+function saveSettings(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+
+let settings = loadSettings();
+
+// ===== Helpers =====
+const fmt = (n) => {
+  if (!isFinite(n)) return "—";
+  return Math.round(n).toLocaleString("ru-RU") + " ₽";
+};
+
+function findRange(price) {
+  return settings.ranges.find(r => price >= r.from && price <= r.to) || null;
+}
+
+function getMinDown(price) {
+  const r = findRange(price);
+  if (!r) return null;
+  return Math.ceil(price * r.percent / 100);
+}
+
+// ===== DOM =====
+const $ = (id) => document.getElementById(id);
+const carPriceEl = $("carPrice");
+const downEl = $("downPayment");
+const payseparateEl = $("payseparate");
+const carPriceHint = $("carPriceHint");
+const carPriceError = $("carPriceError");
+const downHint = $("downHint");
+const downError = $("downError");
+const expensesView = $("expensesView");
+const extraFeeView = $("extraFeeView");
+const bodySumEl = $("bodySum");
+const interestView = $("interestView");
+const termsEl = $("terms");
+
+function applySettingsToUI() {
+  carPriceEl.min = settings.minPrice;
+  carPriceEl.max = settings.maxPrice;
+  if (!carPriceEl.value || +carPriceEl.value < settings.minPrice) {
+    carPriceEl.value = settings.minPrice;
+  }
+  carPriceHint.textContent = `От ${fmt(settings.minPrice)} до ${fmt(settings.maxPrice)}`;
+  expensesView.textContent = fmt(settings.expenses);
+  extraFeeView.textContent = fmt(settings.extraFee);
+  interestView.textContent = fmt(settings.interest) + " / мес";
+}
+
+function recalc() {
+  let price = parseFloat(carPriceEl.value) || 0;
+  let priceErr = "";
+  if (price < settings.minPrice) priceErr = `Минимум ${fmt(settings.minPrice)}`;
+  else if (price > settings.maxPrice) priceErr = `Максимум ${fmt(settings.maxPrice)}`;
+  carPriceError.textContent = priceErr;
+
+  const minDown = getMinDown(price);
+  if (minDown == null) {
+    downHint.textContent = "Стоимость вне допустимых диапазонов";
+    downEl.min = 0;
+  } else {
+    const r = findRange(price);
+    downHint.textContent = `Минимальный взнос: ${fmt(minDown)} (${r.percent}%)`;
+    downEl.min = minDown;
+    if (!downEl.value || +downEl.value < minDown) {
+      downEl.value = minDown;
+    }
+  }
+
+  let down = parseFloat(downEl.value) || 0;
+  let downErr = "";
+  if (minDown != null && down < minDown) downErr = `Меньше минимально допустимого (${fmt(minDown)})`;
+  if (down > price) downErr = "Взнос не может превышать стоимость авто";
+  downError.textContent = downErr;
+
+  // Body
+  const includeFee = !payseparateEl.checked; // checkbox ON => pay separately, NOT included
+  const body = price + (includeFee ? settings.extraFee : 0) - down;
+  bodySumEl.textContent = fmt(body);
+
+  // Terms
+  termsEl.innerHTML = "";
+  const valid = !priceErr && !downErr && body > 0;
+  settings.terms.forEach(m => {
+    const monthly = valid ? (body / m + settings.interest) : NaN;
+    const el = document.createElement("div");
+    el.className = "term" + (valid ? "" : " disabled");
+    el.innerHTML = `<span class="months">${m} мес</span><span class="amount">${valid ? fmt(monthly) : "—"}</span>`;
+    termsEl.appendChild(el);
+  });
+}
+
+[carPriceEl, downEl].forEach(el => el.addEventListener("input", recalc));
+payseparateEl.addEventListener("change", recalc);
+
+// ===== Admin =====
+const adminPanel = $("adminPanel");
+$("adminToggle").addEventListener("click", () => {
+  fillAdmin();
+  adminPanel.classList.remove("hidden");
+});
+$("adminClose").addEventListener("click", () => adminPanel.classList.add("hidden"));
+adminPanel.addEventListener("click", (e) => { if (e.target === adminPanel) adminPanel.classList.add("hidden"); });
+
+function fillAdmin() {
+  $("adm_minPrice").value = settings.minPrice;
+  $("adm_maxPrice").value = settings.maxPrice;
+  $("adm_expenses").value = settings.expenses;
+  $("adm_extraFee").value = settings.extraFee;
+  $("adm_interest").value = settings.interest;
+  renderRanges();
+}
+
+function renderRanges() {
+  const wrap = $("ranges");
+  wrap.innerHTML = "";
+  settings.ranges.forEach((r, i) => {
+    const row = document.createElement("div");
+    row.className = "range-row";
+    row.innerHTML = `
+      <label>От, ₽<input type="number" data-i="${i}" data-k="from" value="${r.from}"></label>
+      <label>До, ₽<input type="number" data-i="${i}" data-k="to" value="${r.to}"></label>
+      <label>%<input type="number" data-i="${i}" data-k="percent" value="${r.percent}"></label>
+      <button class="del" data-del="${i}" type="button">✕</button>
+    `;
+    wrap.appendChild(row);
+  });
+  wrap.querySelectorAll("input").forEach(inp => {
+    inp.addEventListener("input", () => {
+      const i = +inp.dataset.i, k = inp.dataset.k;
+      settings.ranges[i][k] = parseFloat(inp.value) || 0;
+    });
+  });
+  wrap.querySelectorAll("[data-del]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      settings.ranges.splice(+btn.dataset.del, 1);
+      renderRanges();
+    });
+  });
+}
+
+$("addRange").addEventListener("click", () => {
+  settings.ranges.push({ from: 0, to: 0, percent: 10 });
+  renderRanges();
+});
+
+$("adminSave").addEventListener("click", () => {
+  settings.minPrice = +$("adm_minPrice").value || 0;
+  settings.maxPrice = +$("adm_maxPrice").value || 0;
+  settings.expenses = +$("adm_expenses").value || 0;
+  settings.extraFee = +$("adm_extraFee").value || 0;
+  settings.interest = +$("adm_interest").value || 0;
+  settings.ranges.sort((a, b) => a.from - b.from);
+  saveSettings(settings);
+  applySettingsToUI();
+  recalc();
+  adminPanel.classList.add("hidden");
+});
+
+$("adminReset").addEventListener("click", () => {
+  if (!confirm("Сбросить настройки по умолчанию?")) return;
+  settings = structuredClone(DEFAULT_SETTINGS);
+  saveSettings(settings);
+  fillAdmin();
+  applySettingsToUI();
+  recalc();
+});
+
+// ===== Init =====
+applySettingsToUI();
+downEl.value = getMinDown(+carPriceEl.value) || 0;
+recalc();
+  </script>
+</body>
+</html>
