@@ -114,25 +114,13 @@ const MODEL_URL = 'https://teachablemachine.withgoogle.com/models/TNJLHZfJv/';
 с названием класса в Teachable Machine
 ========================================================
 */
-const signVocabulary = {
-
-    'Уступи дорогу':
-        'Знак уступи дорогу. Снизьте скорость и уступите транспортным средствам.',
+const signVocabulary = {   
 
     'znak_stop':
         'Знак стоп. Требуется полная остановка.',
 
     'glavnaya_doroga':
-        'Главная дорога.',
-
-    'Пешеходный переход':
-        'Пешеходный переход.',
-
-    'Ограничение скорости':
-        'Ограничение скорости.',
-
-    'Кирпич':
-        'Въезд запрещён.'
+        'Главная дорога.'
 };
 
 /*
@@ -252,7 +240,7 @@ async function detectFrame() {
     ЕСЛИ УВЕРЕННОСТЬ ВЫШЕ 75%
     ========================================
     */
-    if (probability > 0.75) {
+    if (probability > 0.40) {
 
         const translatedText =
             signVocabulary[className] || className;
