@@ -208,26 +208,25 @@ async function startCamera() {
 ========================================================
 */
 async function detectFrame() {
-
-    if (!isPredicting) return;
+    
+    if (!isPredicting || !model) return;
 
     const predictions = await model.predict(video);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    /*
-    ========================================
-    ИЩЕМ ЛУЧШЕЕ ПРЕДСКАЗАНИЕ
-    ========================================
-    */
+    let resultText = '';
+
+    predictions.forEach(prediction => {
+        resultText += `${prediction.className}: ${Math.round(prediction.probability * 100)}% | `;
+    });
+
+    statusDiv.innerText = resultText;
+
     let bestPrediction = predictions[0];
 
     predictions.forEach(prediction => {
-
-        if (
-            prediction.probability >
-            bestPrediction.probability
-        ) {
+        if (prediction.probability > bestPrediction.probability) {
             bestPrediction = prediction;
         }
     });
@@ -235,68 +234,26 @@ async function detectFrame() {
     const className = bestPrediction.className;
     const probability = bestPrediction.probability;
 
-    /*
-    ========================================
-    ЕСЛИ УВЕРЕННОСТЬ ВЫШЕ 75%
-    ========================================
-    */
-    if (probability > 0.40) {
+    const translatedText = signVocabulary[className] || className;
 
-        const translatedText =
-            signVocabulary[className] || className;
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(10, 10, canvas.width - 20, 80);
 
-        /*
-        ========================================
-        ТЁМНАЯ ПАНЕЛЬ
-        ========================================
-        */
-        ctx.fillStyle = 'rgba(0,0,0,0.65)';
-        ctx.fillRect(
-            10,
-            10,
-            canvas.width - 20,
-            70
-        );
+    ctx.fillStyle = '#00FF00';
+    ctx.font = '22px Arial';
 
-        /*
-        ========================================
-        ТЕКСТ
-        ========================================
-        */
-        ctx.fillStyle = '#00FF00';
-        ctx.font = '22px Arial';
+    ctx.fillText(
+        `${translatedText} (${Math.round(probability * 100)}%)`,
+        20,
+        50
+    );
 
-        ctx.fillText(
-            translatedText,
-            20,
-            50
-        );
-
-        /*
-        ========================================
-        СТАТУС
-        ========================================
-        */
-        statusDiv.innerText =
-            translatedText +
-            ' (' +
-            Math.round(probability * 100) +
-            '%)';
-
-        /*
-        ========================================
-        ОЗВУЧКА
-        ========================================
-        */
+    if (probability > 0.35) {
         speakSign(className);
-
-    } else {
-
-        statusDiv.innerText =
-            'Знак не распознан...';
     }
 
     requestAnimationFrame(detectFrame);
+
 }
 
 /*
